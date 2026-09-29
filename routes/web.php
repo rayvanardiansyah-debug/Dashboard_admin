@@ -1,25 +1,27 @@
 <?php
 
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
 
-// 1. Halaman Frontend (127.0.0.1:8000)
+// 1. Frontend Utama (127.0.0.1:8000)
 Route::get('/', function () {
     return view('frontend.home');
 })->name('home');
 
-// 2. Halaman Login
-Route::get('/login', function () {
-    return view('auth.login');
-})->name('login');
+// 2. Panel Admin & CRUD (Diproteksi Auth Breeze)
+Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
+    // Admin Dashboard (Menampilkan Tabel CRUD)
+    Route::get('/dashboard', [ProductController::class, 'index'])->name('admin.dashboard');
 
-// 3. Proses Form Login -> Masuk ke Halaman Admin
-Route::post('/login-proses', function (Request $request) {
-    // Sesuai instruksi alur: ketika tombol login diklik langsung menuju admin
-    return redirect()->route('admin.dashboard');
-})->name('login.proses');
+    // Resource Route CRUD
+    Route::resource('products', ProductController::class)->except(['show']);
 
-// 4. Halaman Admin Dashboard
-Route::get('/admin/dashboard', function () {
-    return view('admin.dashboard');
-})->name('admin.dashboard');
+    // Profile Controller bawaan Breeze
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// Load Rute Autentikasi Bawaan Breeze
+require __DIR__.'/auth.php';
