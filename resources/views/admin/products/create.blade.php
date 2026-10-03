@@ -8,6 +8,18 @@
     <div class="card-body">
         <form action="{{ route('products.store') }}" method="POST">
             @csrf
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Kode Barang</label>
+                    <input type="text" name="code" value="{{ old('code') }}" class="form-control" placeholder="Contoh: BRG001">
+                @error('code')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Barcode</label>
+                    <input type="text" name="barcode" value="{{ old('barcode') }}" class="form-control" placeholder="Scan atau ketik barcode" autocomplete="off">
+                @error('barcode')<div class="text-danger small mt-1">{{ $message }}</div>@enderror
+                </div>
+            </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Nama Produk</label>
                 <input type="text" name="name" class="form-control" required>

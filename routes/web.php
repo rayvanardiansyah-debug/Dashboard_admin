@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\KasirController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -13,6 +14,11 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     // Admin Dashboard (Menampilkan Tabel CRUD)
     Route::get('/dashboard', [ProductController::class, 'index'])->name('admin.dashboard');
+
+    // Halaman Kasir (transaksi pembayaran)
+    Route::get('/kasir', [KasirController::class, 'index'])->name('admin.kasir');
+    Route::post('/kasir/transaksi', [KasirController::class, 'store'])->name('admin.kasir.store');
+    Route::get('/kasir/struk/{transaction}', [KasirController::class, 'struk'])->name('admin.kasir.struk');
 
     // Resource Route CRUD
     Route::resource('products', ProductController::class)->except(['show']);

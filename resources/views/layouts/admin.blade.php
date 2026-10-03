@@ -25,6 +25,11 @@
                     <i class="bi bi-box-seam me-2"></i> Kelola Produk
                 </a>
             </li>
+            <li>
+                <a href="{{ route('admin.kasir') }}" class="nav-link">
+                    <i class="bi bi-cash-coin me-2"></i> Kasir
+                </a>
+            </li>
         </ul>
         <hr class="text-secondary">
         <form action="{{ route('logout') }}" method="POST">

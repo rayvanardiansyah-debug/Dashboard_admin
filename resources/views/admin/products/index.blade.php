@@ -25,6 +25,8 @@
                 <thead class="table-light">
                     <tr>
                         <th>No</th>
+                        <th>Kode</th>
+                        <th>Barcode</th>
                         <th>Nama Produk</th>
                         <th>Harga</th>
                         <th>Deskripsi</th>
@@ -35,6 +37,8 @@
                     @forelse($products as $index => $product)
                         <tr>
                             <td>{{ $index + 1 }}</td>
+                            <td>{{ $product->code ?? '-' }}</td>
+                            <td>{{ $product->barcode ?? '-' }}</td>
                             <td class="fw-semibold">{{ $product->name }}</td>
                             <td>Rp {{ number_format($product->price, 0, ',', '.') }}</td>
                             <td class="text-muted">{{ $product->description ?? '-' }}</td>
@@ -51,7 +55,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center py-4 text-muted">Belum ada data produk.</td>
+                            <td colspan="7" class="text-center py-4 text-muted">Belum ada data produk.</td>
                         </tr>
                     @endforelse
                 </tbody>

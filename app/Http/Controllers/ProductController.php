@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -20,13 +21,15 @@ class ProductController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
+            'code' => 'nullable|string|max:50|unique:products,code',
+            'barcode' => 'nullable|string|max:50|unique:products,barcode',
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
             'description' => 'nullable|string',
         ]);
 
-        Product::create($request->all());
+        Product::create($data);
 
         return redirect()->route('admin.dashboard')->with('success', 'Produk berhasil ditambahkan!');
     }
@@ -38,13 +41,15 @@ class ProductController extends Controller
 
     public function update(Request $request, Product $product)
     {
-        $request->validate([
+        $data = $request->validate([
+            'code' => ['nullable', 'string', 'max:50', Rule::unique('products', 'code')->ignore($product->id)],
+            'barcode' => ['nullable', 'string', 'max:50', Rule::unique('products', 'barcode')->ignore($product->id)],
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
             'description' => 'nullable|string',
         ]);
 
-        $product->update($request->all());
+        $product->update($data);
 
         return redirect()->route('admin.dashboard')->with('success', 'Produk berhasil diperbarui!');
     }
