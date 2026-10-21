@@ -25,6 +25,7 @@
                 <thead class="table-light">
                     <tr>
                         <th>No</th>
+                        <th>Gambar</th>
                         <th>Kode</th>
                         <th>Barcode</th>
                         <th>Nama Produk</th>
@@ -37,6 +38,15 @@
                     @forelse($products as $index => $product)
                         <tr>
                             <td>{{ $index + 1 }}</td>
+                            <td>
+                                @if ($product->image_url)
+                                    <img src="{{ $product->image_url }}" alt="{{ $product->name }}"
+                                         class="rounded border" style="width: 48px; height: 48px; object-fit: cover;">
+                                @else
+                                    <div class="rounded border bg-light d-flex align-items-center justify-content-center text-muted"
+                                         style="width: 48px; height: 48px;"><i class="bi bi-image"></i></div>
+                                @endif
+                            </td>
                             <td>{{ $product->code ?? '-' }}</td>
                             <td>{{ $product->barcode ?? '-' }}</td>
                             <td class="fw-semibold">{{ $product->name }}</td>
@@ -55,7 +65,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">Belum ada data produk.</td>
+                            <td colspan="8" class="text-center py-4 text-muted">Belum ada data produk.</td>
                         </tr>
                     @endforelse
                 </tbody>

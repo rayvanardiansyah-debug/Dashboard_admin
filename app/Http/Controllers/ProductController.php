@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\storage;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver;
 
 class ProductController extends Controller
 {
@@ -27,7 +30,32 @@ class ProductController extends Controller
             'name' => 'required|string|max:255',
             'price' => 'required|numeric',
             'description' => 'nullable|string',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
+
+        $file = $request->file('image');
+        if ($file) {
+            $original = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $ext = strtolower($file->getClientOriginalExtension());
+            $filename = time() . '_' . preg_replace('/[^a-zA-Z0-9]/', '_', $original) . '.' . $ext;
+            $folder = 'products';
+            $path = $folder . '/' . $filename;
+
+            $manager = new ImageManager(Driver::class);
+
+            $image = $manager->decodePath($file->getRealPath());
+            $image = $image->cover(800, 800);
+
+            if ($ext === 'png') {
+                $encode = $image->encodeUsingFileExtension('png', quality: 90);
+            } else {
+                $encode = $image->encodeUsingFileExtension('jpg', quality: 90);
+            }
+
+            storage::disk('public')->put($path, $encode->toString());
+
+            $data['image'] = $path;
+        }
 
         Product::create($data);
 
