@@ -19,6 +19,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/kasir', [KasirController::class, 'index'])->name('admin.kasir');
     Route::post('/kasir/transaksi', [KasirController::class, 'store'])->name('admin.kasir.store');
     Route::get('/kasir/struk/{transaction}', [KasirController::class, 'struk'])->name('admin.kasir.struk');
+    Route::get('/kasir/invoice/{transaction}', [KasirController::class, 'invoice'])->name('admin.kasir.invoice');
 
     // Resource Route CRUD
     Route::resource('products', ProductController::class)->except(['show']);

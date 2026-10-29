@@ -59,6 +59,7 @@
 
 <div class="toolbar no-print">
     <button type="button" onclick="window.print()">Cetak Struk</button>
+    <a href="{{ route('admin.kasir.invoice', $transaction) }}">Unduh Invoice (PDF)</a>
     <a class="secondary" href="{{ route('admin.kasir') }}">Kembali ke Kasir</a>
 </div>
 

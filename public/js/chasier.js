@@ -701,7 +701,8 @@ async function processPayment() {
         showToast(
             "<strong>" + escapeHtml(trx.number) + "</strong> tersimpan.<br>" +
             "Total " + formatRupiah(trx.grand_total) + " • Kembali " + formatRupiah(trx.change_amount) + "<br>" +
-            '<a href="' + escapeHtml(result.receipt_url) + '" target="_blank" rel="noopener">Cetak ulang struk</a>',
+            '<a href="' + escapeHtml(result.receipt_url) + '" target="_blank" rel="noopener">Cetak ulang struk</a>' +
+            ' • <a href="' + escapeHtml(result.invoice_url) + '">Unduh invoice (PDF)</a>',
             "success",
             12000,
         );

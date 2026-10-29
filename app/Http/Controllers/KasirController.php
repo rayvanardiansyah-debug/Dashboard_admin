@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Transaction;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -133,6 +134,7 @@ class KasirController extends Controller
                 'payment_method' => $transaction->payment_method,
             ],
             'receipt_url' => route('admin.kasir.struk', $transaction),
+            'invoice_url' => route('admin.kasir.invoice', $transaction),
             'next_number' => self::nextTransactionNumber(),
         ], 201);
     }
@@ -151,7 +153,33 @@ class KasirController extends Controller
         ]);
     }
 
-    // ------------------------------------------------------------------
+    /**
+     * Unduh invoice dalam bentuk PDF (Acara 30 - barryvdh/laravel-dompdf).
+     */
+    public function invoice(Transaction $transaction)
+    {
+        $transaction = Transaction::with('details')->findOrFail($transaction->id);
+
+        // normalize fields expected by the invoice view
+        // invoice view expects $invoice->items[*]->total and $invoice->total
+        // (disesuaikan dengan kolom transactions & transaction_details)
+        $invoice = $transaction;
+        $invoice->setRelation('items', $invoice->details);
+        foreach ($invoice->items as $item) {
+            $item->setRelation('product', new Product(['name' => $item->product_name]));
+            $item->quantity = $item->qty;
+
+            if (!isset($item->total)) {
+                $item->total = $item->subtotal ?? ($item->price * $item->quantity);
+            }
+        }
+        $invoice->total = $invoice->grand_total ?? 0;
+
+        $pdf = Pdf::loadView('invoices.invoice', ['invoice' => $invoice]);
+
+        return $pdf->download('invoice_' . $invoice->id . '.pdf');
+    }
+
 
     private static function fallbackCode(int $id): string
     {
