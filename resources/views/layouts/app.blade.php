@@ -32,5 +32,36 @@
                 {{ $slot }}
             </main>
         </div>
+        <!-- Toastr (Visual Notification) & Echo Listener (BKPM Acara 32) -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+        <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
+        @auth
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                if (window.Echo) {
+                    const handleOrderPlaced = (e) => {
+                        console.log('Order Placed:', e);
+                        if (typeof toastr !== 'undefined') {
+                            toastr.options = {
+                                "closeButton": true,
+                                "progressBar": true,
+                                "positionClass": "toast-top-right",
+                                "timeOut": "7000"
+                            };
+                            toastr.success(`Order #${e.order_id} telah ditempatkan! Total: Rp ${Number(e.total).toLocaleString('id-ID')}`, 'Notifikasi');
+                        } else {
+                            alert(`Order #${e.order_id} telah ditempatkan! Total: Rp ${e.total}`);
+                        }
+                    };
+
+                    window.Echo.private('user.{{ auth()->id() }}')
+                        .listen('OrderPlaced', handleOrderPlaced)
+                        .listen('.order.placed', handleOrderPlaced);
+                }
+            });
+        </script>
+        @endauth
     </body>
 </html>

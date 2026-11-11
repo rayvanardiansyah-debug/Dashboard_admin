@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>Kasir Retail POS</title>
     <link rel="stylesheet" href="{{ asset('css/chasier.css') }}">
+    @vite(['resources/js/app.js'])
 </head>
 <body>
 
@@ -202,6 +203,8 @@
     window.KASIR_PRODUCTS = @json($products);
     // Alamat simpan transaksi & nomor transaksi berikutnya (dari server)
     window.KASIR_STORE_URL = @json(route('admin.kasir.store'));
+    // Pembayaran non-tunai via Midtrans Snap (Acara 37 & 38)
+    window.KASIR_MIDTRANS_URL = @json(route('admin.kasir.midtrans'));
     window.KASIR_NEXT_NUMBER = @json($nextNumber);
 </script>
 <!-- Daftar transaksi yang ditahan -->
@@ -230,6 +233,26 @@
 <!-- Notifikasi (pengganti alert bawaan browser) -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+<script src="{{ config('midtrans.isProduction') ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js' }}"
+        data-client-key="{{ config('midtrans.clientKey') }}"></script>
 <script src="{{ asset('js/chasier.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.Echo) {
+            const handleOrderPlaced = (e) => {
+                console.log('Order Placed event received:', e);
+                if (typeof showToast === 'function') {
+                    showToast(`📢 Order #${e.order_id} berhasil ditempatkan! Total: Rp ${Number(e.total).toLocaleString('id-ID')}`, 'success');
+                } else {
+                    alert(`Order #${e.order_id} telah ditempatkan! Total: Rp ${e.total}`);
+                }
+            };
+
+            window.Echo.private('user.{{ auth()->id() }}')
+                .listen('OrderPlaced', handleOrderPlaced)
+                .listen('.order.placed', handleOrderPlaced);
+        }
+    });
+</script>
 </body>
 </html>

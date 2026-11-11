@@ -645,6 +645,11 @@ async function processPayment() {
         return;
     }
 
+    // Selain Tunai, pembayaran diproses lewat Midtrans Snap (popup).
+    if (getPaymentMethod() !== "Tunai") {
+        return processMidtrans();
+    }
+
     const total = getGrandTotal();
     const payment = numberValue("payment");
 
@@ -717,6 +722,159 @@ async function processPayment() {
         isPaying = false;
         payButton.disabled = false;
     }
+}
+
+/* ============================================
+   PAYMENT MIDTRANS (non-tunai, Acara 37 & 38)
+   1) server membuat transaksi "pending" + Snap token
+   2) popup Snap tampil di browser kasir
+   3) status "paid" diterima lewat webhook / cek status
+============================================ */
+function midtransCartPayload() {
+    return {
+        items: cart.map((item) => ({ id: item.id, qty: item.qty })),
+        discount_percent: numberValue("discountPercent"),
+        discount_amount: Math.round(numberValue("discountAmount")),
+        tax: Math.round(numberValue("tax")),
+        other_fee: Math.round(numberValue("otherFee")),
+        payment_method: getPaymentMethod(),
+        customer_type: document.getElementById("customerType").value,
+        customer_phone: document.getElementById("customerPhone").value.trim() || null,
+    };
+}
+
+async function fetchMidtransStatus(statusUrl) {
+    const response = await fetch(statusUrl, {
+        headers: { "Accept": "application/json", "X-Requested-With": "XMLHttpRequest" },
+    });
+    return response.json();
+}
+
+function finishMidtransPayment(result) {
+    const trx = result.transaction;
+
+    showToast(
+        "<strong>" + escapeHtml(trx.number) + "</strong> LUNAS via Midtrans.<br>" +
+        "Total " + formatRupiah(trx.grand_total) + "<br>" +
+        '<a href="' + escapeHtml(result.receipt_url) + '" target="_blank" rel="noopener">Cetak ulang struk</a>' +
+        ' • <a href="' + escapeHtml(result.invoice_url) + '">Unduh invoice (PDF)</a>',
+        "success",
+        12000,
+    );
+
+    printReceipt(result.receipt_url);
+}
+
+// Menunggu pembayaran (mis. Virtual Account / QRIS): cek status tiap 5 detik, maksimal 10 menit.
+function pollMidtransStatus(statusUrl, tries = 0) {
+    if (tries >= 120) return;
+
+    setTimeout(async () => {
+        try {
+            const result = await fetchMidtransStatus(statusUrl);
+            const status = result.transaction && result.transaction.status;
+
+            if (status === "paid") {
+                finishMidtransPayment(result);
+                return;
+            }
+            if (status === "failed") {
+                showToast("Pembayaran " + escapeHtml(result.transaction.number) + " gagal / kedaluwarsa.", "error", 8000);
+                return;
+            }
+        } catch (error) {
+            // abaikan, coba lagi
+        }
+        pollMidtransStatus(statusUrl, tries + 1);
+    }, 5000);
+}
+
+async function processMidtrans() {
+    if (typeof window.snap === "undefined") {
+        showToast("Midtrans Snap belum termuat. Periksa koneksi internet dan Client Key, lalu muat ulang halaman.", "error", 8000);
+        return;
+    }
+
+    const payButton = document.querySelector(".btn-pay");
+    isPaying = true;
+    payButton.disabled = true;
+
+    let data;
+    try {
+        const response = await fetch(window.KASIR_MIDTRANS_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": csrfToken(),
+            },
+            body: JSON.stringify(midtransCartPayload()),
+        });
+
+        data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            const firstError = data.errors
+                ? Object.values(data.errors)[0][0]
+                : data.message || "Gagal membuat pembayaran (kode " + response.status + ").";
+            showToast(escapeHtml(firstError), "error", 8000);
+            isPaying = false;
+            payButton.disabled = false;
+            return;
+        }
+    } catch (error) {
+        showToast("Tidak dapat terhubung ke server. Pembayaran belum dibuat.", "error", 7000);
+        isPaying = false;
+        payButton.disabled = false;
+        return;
+    }
+
+    const statusUrl = data.status_url;
+    const done = () => {
+        isPaying = false;
+        payButton.disabled = false;
+    };
+
+    window.snap.pay(data.snap_token, {
+        onSuccess: async function () {
+            try {
+                const result = await fetchMidtransStatus(statusUrl);
+                if (result.transaction && result.transaction.status === "paid") {
+                    finishMidtransPayment(result);
+                } else {
+                    showToast("Pembayaran diterima, menunggu konfirmasi Midtrans...", "info", 6000);
+                    pollMidtransStatus(statusUrl);
+                }
+            } catch (error) {
+                pollMidtransStatus(statusUrl);
+            }
+            document.getElementById("transactionNumber").innerText = data.next_number;
+            resetTransaction();
+            done();
+        },
+        onPending: function () {
+            showToast(
+                "<strong>" + escapeHtml(data.transaction.number) + "</strong> menunggu pembayaran. " +
+                "Struk akan tercetak otomatis setelah lunas.",
+                "info",
+                8000,
+            );
+            pollMidtransStatus(statusUrl);
+            document.getElementById("transactionNumber").innerText = data.next_number;
+            resetTransaction();
+            done();
+        },
+        onError: function () {
+            showToast("Pembayaran gagal. Silakan coba lagi.", "error", 7000);
+            done();
+        },
+        onClose: function () {
+            // Popup ditutup tanpa membayar: keranjang dipertahankan agar bisa dicoba lagi.
+            showToast("Popup pembayaran ditutup. Keranjang dipertahankan.", "warning", 4000);
+            done();
+        },
+    });
 }
 
 /* ============================================
