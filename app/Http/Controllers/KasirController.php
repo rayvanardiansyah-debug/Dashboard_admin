@@ -6,6 +6,7 @@ use App\Events\OrderPlaced;
 use App\Models\Product;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Transaction;
+use App\Services\ReceiptPrinter;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,9 +58,9 @@ class KasirController extends Controller
         );
 
         // Trigger Event OrderPlaced (BKPM Acara 32)
-        event(new OrderPlaced($transaction, $request->user()));
+        $thermal = self::onPaid($transaction, $request->user());
 
-        return $this->transactionResponse($transaction, 'Pembayaran berhasil.', 201);
+        return $this->transactionResponse($transaction, 'Pembayaran berhasil.', 201, $thermal);
     }
 
     /**
@@ -139,6 +140,8 @@ class KasirController extends Controller
     {
         MidtransController::configure();
 
+        $thermal = null;
+
         if ($transaction->status === 'pending' || $transaction->status === 'challenge') {
             try {
                 $status = (object) MidtransTransaction::status($transaction->transaction_number);
@@ -149,14 +152,14 @@ class KasirController extends Controller
                 );
 
                 if ($becamePaid) {
-                    event(new OrderPlaced($transaction, $request->user()));
+                    $thermal = self::onPaid($transaction, $request->user());
                 }
             } catch (\Throwable $e) {
                 // Belum ada transaksi di Midtrans (popup ditutup sebelum memilih metode): biarkan pending.
             }
         }
 
-        return $this->transactionResponse($transaction->fresh(), 'Status diperbarui.');
+        return $this->transactionResponse($transaction->fresh(), 'Status diperbarui.', 200, $thermal);
     }
 
     public function struk(Request $request, Transaction $transaction)
@@ -200,6 +203,34 @@ class KasirController extends Controller
         return $pdf->download('invoice_' . $invoice->id . '.pdf');
     }
 
+
+    /**
+     * Dipanggil sekali ketika transaksi BARU SAJA lunas (tunai, webhook, atau cek status):
+     * kirim event realtime dan cetak struk otomatis ke printer thermal (Acara 36).
+     *
+     * @return array{printed: bool, message: string}|null
+     */
+    public static function onPaid(Transaction $transaction, $user = null): ?array
+    {
+        if ($user) {
+            self::broadcastOrder($transaction, $user);
+        }
+
+        return app(ReceiptPrinter::class)->autoPrint($transaction);
+    }
+
+    /**
+     * Kirim event OrderPlaced. Jika Reverb tidak aktif, pembayaran tetap berhasil
+     * dan error hanya dicatat di log.
+     */
+    public static function broadcastOrder(Transaction $transaction, $user): void
+    {
+        try {
+            event(new OrderPlaced($transaction, $user));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
 
     private function validateCart(Request $request, bool $requirePaid): array
     {
@@ -294,7 +325,7 @@ class KasirController extends Controller
         });
     }
 
-    private function transactionResponse(Transaction $transaction, string $message, int $code = 200): JsonResponse
+    private function transactionResponse(Transaction $transaction, string $message, int $code = 200, ?array $thermal = null): JsonResponse
     {
         return response()->json([
             'message' => $message,
@@ -309,6 +340,7 @@ class KasirController extends Controller
             ],
             'receipt_url' => route('admin.kasir.struk', $transaction),
             'invoice_url' => route('admin.kasir.invoice', $transaction),
+            'thermal' => $thermal,
             'next_number' => self::nextTransactionNumber(),
         ], $code);
     }

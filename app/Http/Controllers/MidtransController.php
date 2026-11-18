@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Transaction;
-use App\Events\OrderPlaced;
 use Illuminate\Http\Request;
 use Midtrans\Config;
 use Midtrans\Notification;
@@ -18,7 +17,7 @@ class MidtransController extends Controller
     }
 
     /**
-     * Konfigurasi SDK Midtrans dari config/midtrans.php
+     * Konfigurasi SDK Midtrans dari config/midtrans.php (Acara 37).
      */
     public static function configure(): void
     {
@@ -27,6 +26,7 @@ class MidtransController extends Controller
         Config::$isSanitized  = filter_var(config('midtrans.isSanitized'), FILTER_VALIDATE_BOOLEAN);
         Config::$is3ds        = filter_var(config('midtrans.is3ds'), FILTER_VALIDATE_BOOLEAN);
 
+        // Sertifikat CA untuk cURL. Berguna jika curl.cainfo di php.ini salah/tidak ada (mis. di Laragon).
         // Prioritas: MIDTRANS_CACERT di .env, lalu cacert.pem bawaan paket midtrans-php.
         $cacert = config('midtrans.cacert') ?: base_path('vendor/midtrans/midtrans-php/data/cacert.pem');
 
@@ -101,8 +101,9 @@ class MidtransController extends Controller
         $trx = Transaction::where('transaction_number', $orderId)->first();
 
         if ($trx) {
-            if ($trx->applyMidtransStatus($transaction, $fraud) && $trx->user) {
-                event(new OrderPlaced($trx, $trx->user));
+            if ($trx->applyMidtransStatus($transaction, $fraud)) {
+                // Event realtime + cetak struk thermal otomatis (Acara 36)
+                KasirController::onPaid($trx, $trx->user);
             }
 
             return response()->json(['message' => 'Notification handled']);

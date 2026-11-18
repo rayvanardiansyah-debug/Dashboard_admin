@@ -622,6 +622,25 @@ function printReceipt(url) {
     frame.src = url + (url.includes("?") ? "&" : "?") + "print=1";
 }
 
+/*
+   Struk: bila PRINTER_AUTO_PRINT=true, server sudah mencetak ke printer thermal
+   (ESC/POS) sehingga browser TIDAK mencetak lagi. Jika tidak, cetak lewat browser.
+*/
+function handleReceipt(result) {
+    if (window.KASIR_THERMAL) {
+        const thermal = result.thermal;
+
+        if (thermal && thermal.printed === false) {
+            showToast("Struk gagal dicetak ke printer thermal: " + escapeHtml(thermal.message), "error", 10000);
+        } else {
+            showToast(escapeHtml(thermal && thermal.message ? thermal.message : "Struk dicetak otomatis ke printer thermal."), "info", 5000);
+        }
+        return;
+    }
+
+    printReceipt(result.receipt_url);
+}
+
 /* ============================================
    PAYMENT (simpan ke server, lalu cetak struk)
 ============================================ */
@@ -712,7 +731,7 @@ async function processPayment() {
             12000,
         );
 
-        printReceipt(result.receipt_url);
+        handleReceipt(result);
 
         document.getElementById("transactionNumber").innerText = result.next_number;
         resetTransaction();
@@ -762,7 +781,7 @@ function finishMidtransPayment(result) {
         12000,
     );
 
-    printReceipt(result.receipt_url);
+    handleReceipt(result);
 }
 
 // Menunggu pembayaran (mis. Virtual Account / QRIS): cek status tiap 5 detik, maksimal 10 menit.

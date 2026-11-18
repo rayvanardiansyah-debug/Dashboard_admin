@@ -205,6 +205,8 @@
     window.KASIR_STORE_URL = @json(route('admin.kasir.store'));
     // Pembayaran non-tunai via Midtrans Snap (Acara 37 & 38)
     window.KASIR_MIDTRANS_URL = @json(route('admin.kasir.midtrans'));
+    // Cetak struk thermal otomatis dari backend (Acara 36)
+    window.KASIR_THERMAL = @json((bool) config('printer.auto_print'));
     window.KASIR_NEXT_NUMBER = @json($nextNumber);
 </script>
 <!-- Daftar transaksi yang ditahan -->

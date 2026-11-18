@@ -4,6 +4,7 @@ use App\Http\Controllers\KasirController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\MidtransController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,7 +24,7 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::get('/kasir/struk/{transaction}', [KasirController::class, 'struk'])->name('admin.kasir.struk');
     Route::get('/kasir/invoice/{transaction}', [KasirController::class, 'invoice'])->name('admin.kasir.invoice');
 
-    // Pembayaran non-tunai via Midtrans Snap 
+    // Pembayaran non-tunai via Midtrans Snap (Acara 37 & 38)
     Route::post('/kasir/midtrans', [KasirController::class, 'midtransCharge'])->name('admin.kasir.midtrans');
     Route::get('/kasir/midtrans/{transaction}/status', [KasirController::class, 'midtransStatus'])->name('admin.kasir.midtrans.status');
 
@@ -40,7 +41,13 @@ Route::middleware(['auth', 'verified'])->prefix('admin')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-// 3. Midtrans
+// Cetak struk thermal ESC/POS 
+Route::middleware('auth')->group(function () {
+    Route::get('/print-receipt', [ReceiptController::class, 'print'])->name('print.receipt');
+    Route::get('/print-receipt/{transaction}', [ReceiptController::class, 'printTransaction'])->name('print.receipt.transaction');
+});
+
+// 3. Midtrans (Acara 37 & 38)
 // Halaman demo checkout produk digital (sesuai modul). Halaman utama '/' tidak ditimpa lagi.
 Route::get('/demo-checkout', function () {
     return view('checkout');
