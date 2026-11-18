@@ -5,18 +5,20 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['code', 'barcode', 'name', 'price', 'description', 'image'];
+    protected $fillable = ['category_id', 'code', 'barcode', 'name', 'price', 'stock', 'description', 'image'];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     /**
-     * URL gambar produk (atau null jika belum ada gambar).
-     * Memakai asset() agar mengikuti alamat yang sedang dibuka di browser
-     * (127.0.0.1 / localhost / domain), dan membutuhkan `php artisan storage:link`.
-     *
      *   {{ $product->image_url }}
      */
     protected function imageUrl(): Attribute

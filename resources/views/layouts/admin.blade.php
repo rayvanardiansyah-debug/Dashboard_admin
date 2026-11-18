@@ -33,6 +33,11 @@
                     <i class="bi bi-cash-coin me-2"></i> Kasir
                 </a>
             </li>
+            <li>
+                <a href="{{ url('/filament') }}" class="nav-link">
+                    <i class="bi bi-grid-1x2 me-2"></i> Panel Filament
+                </a>
+            </li>
         </ul>
         <hr class="text-secondary">
         <form action="{{ route('logout') }}" method="POST">
